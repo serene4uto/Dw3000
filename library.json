@@ -1,0 +1,22 @@
+{
+  "name": "DW3000",
+  "version": "1.0.0",
+  "description": "Library for DW3000 UWB module",
+  "keywords": ["dw3000", "UWB", "ranging"],
+  "authors": [
+    {
+      "name": "Nguyen Ha Trung",
+      "email": "nguyenhatrung411@gmail.com"
+    }
+  ],
+  "license": "MIT",
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"],
+  "build": {
+    "includeDir": "driver/inc",
+    "srcFilter": [
+      "+<driver/src/*>",
+      "+<platform_esp32/*>"
+    ]
+  }
+}
