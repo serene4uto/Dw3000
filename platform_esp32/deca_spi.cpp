@@ -34,7 +34,7 @@ const dw_t dw_chip = {
     .irqPin = DW_IRQ_PIN,
     .rstPin = DW_RST_PIN,
     .wakeUpPin = DW_WAKEUP_PIN,
-    .pSpi = &SPI
+    .pSpi = &spi_handle
 };
 
 const dw_t *pDwChip = &dw_chip;

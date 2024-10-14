@@ -19,6 +19,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#include "deca_spi.h"
 #include "error_types.h"
 
 #define DW_SPI_MAX_BAUDRATE 8000000
@@ -56,7 +57,7 @@ struct dw_s
     uint8_t         irqPin;       // Interrupt pin number
     uint8_t         rstPin;       // Reset pin number
     uint8_t         wakeUpPin;    // Wake-up pin number
-    SPIClass        *pSpi;         // Pointer to SPIClass instance (e.g., &SPI)
+    spi_handle_t    *pSpi;         // Pointer to SPIClass instance (e.g., &SPI)
 };
 
 typedef struct dw_s dw_t;

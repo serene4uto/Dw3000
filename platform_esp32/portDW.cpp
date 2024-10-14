@@ -15,6 +15,8 @@
 #include "freertos/task.h"
 #include "port.h"
 
+/**/
+extern const dw_t *pDwChip;
 
 /****************************************************************************//**
  * Sleep, usleep and bare sw_timer based on HAL tick
@@ -76,6 +78,42 @@ void dwp_usleep(uint32_t usec)
  *
  */
 
+/*!
+ * @fn reset_DW3000()
+ * @brief
+ * Low-level abstract function to reset the DW3000 device.
+ * Configures the reset pin as output, asserts reset, then deconfigures as input.
+ */
+void reset_DW3000(void)
+{
+    const dw_t *pDw = pDwChip;
+
+    // // ---------------------------
+    // // Step 1: Configure Reset Pin as OUTPUT
+    // // ---------------------------
+    // pinMode(pDw->rstPin, OUTPUT);       // Set reset pin as OUTPUT
+    // digitalWrite(pDw->rstPin, LOW);     // Assert reset by pulling pin LOW
+
+    // // ---------------------------
+    // // Step 2: Hold Reset LOW for 200 microseconds
+    // // ---------------------------
+    // delayMicroseconds(200);             // Wait for 200 us
+
+    // // ---------------------------
+    // // Step 3: Configure Reset Pin as INPUT with No Pull
+    // // ---------------------------
+    // pinMode(pDw->rstPin, INPUT);        // Set reset pin as INPUT (High Impedance)
+
+    // // ---------------------------
+    // // Step 4: Wait for 2000 microseconds (2 milliseconds)
+    // // ---------------------------
+    // delayMicroseconds(2000);            // Wait for 2000 us (2 ms)
+}
+
+/****************************************************************************//**
+ *
+ */
+
 
 void wakeup_device_with_io(void)
 {
@@ -94,6 +132,8 @@ void wakeup_device_with_io(void)
  */
 error_e port_wakeup_dw3000_fast(void)
 {
+    spi_handle_t *p = pDwChip->pSpi;
+
     // Pull CS low to initiate wakeup
     digitalWrite(DW_CS_PIN, LOW);
     usleep(500);  // Delay for 500 microseconds

@@ -12,7 +12,16 @@
 
 
 #include "deca_version.h"
+#include "deca_interface.h"
 #include "deca_device_api.h"
+
+#include "dw3000_vals.h"
+#include "dw3000_regs.h"
+
+#define SET_SPI_HEADER_0(base_addr, sub_addr)\
+    ((0x00 | 0x40) | ((base_addr) << 1) | (((sub_addr) & 0x40) >> 7)) // r bit + bit 1 + base address + 1 bit of sub address
+#define SET_SPI_HEADER_1(sub_addr)\
+    (((sub_addr) & 0x7F) << 2) // r bit + bit 1 + base address + 1 bit of sub address
 
 
 // -------------------------------------------------------------------------------------------------------------------
@@ -38,6 +47,8 @@ struct dwt_localdata_s
     dwt_spi_crc_mode_e   spicrc;      // Use SPI CRC when this flag is true
     uint8_t       stsconfig;          // STS configuration mode
     uint8_t       cia_diagnostic;     // CIA dignostic logging level
+
+    /* Callbacks */
     dwt_cb_data_t cbData;             // Callback data structure
     dwt_spierrcb_t cbSPIRDErr;        // Callback for SPI read error events
     dwt_cb_t    cbTxDone;             // Callback for TX confirmation event
@@ -53,6 +64,31 @@ typedef dwt_localdata_s dw_localdata_t;
 dw_localdata_t dw_localdata[DWT_NUM_DW_DEV];
 
 dw_localdata_t *p_dw_localdata;
+
+// -------------------------------------------------------------------------------------------------------------------
+// Function prototypes
+
+static void dwt_readregfulladdr(uint8_t base_addr, uint16_t sub_addr, uint8_t *buffer, uint16_t len) {
+    uint8_t header_buf[2] = {
+        SET_SPI_HEADER_0(base_addr, sub_addr),
+        SET_SPI_HEADER_1(sub_addr)
+    };
+
+    const struct dwt_spi_s *spi_fct = (const struct dwt_spi_s *)(pdwt_probe->spi);
+
+    spi_fct->readfromspi(2, header_buf, len, buffer);
+}
+
+static void dwt_writeregfulladdr(uint8_t base_addr, uint16_t sub_addr, uint8_t *buffer, uint16_t len) {
+    uint8_t header_buf[2] = {
+        SET_SPI_HEADER_0(base_addr, sub_addr),
+        SET_SPI_HEADER_1(sub_addr)
+    };
+
+    const struct dwt_spi_s *spi_fct = (const struct dwt_spi_s *)(pdwt_probe->spi);
+
+    spi_fct->writetospi(2, header_buf, len, buffer);
+}
 
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -103,6 +139,7 @@ int32_t dwt_apiversion(void) {
  */
 struct dwchip_s* dwt_update_dw(struct dwchip_s* new_dw) {
     //TODO: implement this function
+    return NULL;
 }
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -116,7 +153,7 @@ struct dwchip_s* dwt_update_dw(struct dwchip_s* new_dw) {
  */
 char *dwt_version_string(void) {
 
-    return DRIVER_VERSION_STR;
+    return (char*)DRIVER_VERSION_STR;
 }
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -210,8 +247,102 @@ uint32_t dwt_getlotid(void) {
  * returns the silicon DevID
  */
 uint32_t dwt_readdevid(void) {
-    //TODO: implement this function
+
+    uint8_t read_buf[4] = {0}; // Initialize the buffer to zero
+
+    // Read the device ID from the DW3000_DEV_ID register
+    dwt_readregfulladdr(DW3000_REG_0_ADDR, DW3000_REG_0_DEV_ID_OFFSET, read_buf, 4);
+
+    // Return the device ID in little-endian format
+    return *((uint32_t*)read_buf);  // This optimizes the conversion of 4 bytes into a 32-bit integer
 }
+
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief This is used to return the read OTP revision
+ *
+ * NOTE: dwt_initialise() must be called prior to this function so that it can return a relevant value.
+ *
+ * input parameters
+ *
+ * output parameters
+ *
+ * returns the read OTP revision value
+ */
+uint8_t dwt_otprevision(void) {
+    return p_dw_localdata->otprev;
+}
+
+/*! ------------------------------------------------------------------------------------------------------------------
+  * @brief This function enables/disables the fine grain TX sequencing (enabled by default).
+  *
+  * input parameters
+  * @param enable - 1 to enable fine grain TX sequencing, 0 to disable it.
+  *
+  * output parameters none
+  *
+  * no return value
+  */
+void dwt_setfinegraintxseq(bool enable) {
+
+    // Select the appropriate value based on the 'enable' flag
+    uint32_t fine_seq_value = enable ? PMSC_TXFINESEQ_ENABLE : PMSC_TXFINESEQ_DISABLE;
+
+    // Convert the 32-bit value to a byte array (little-endian)
+    uint8_t fine_seq_buf[4] = {
+        (uint8_t)(fine_seq_value & 0xFF),
+        (uint8_t)((fine_seq_value >> 8) & 0xFF),
+        (uint8_t)((fine_seq_value >> 16) & 0xFF),
+        (uint8_t)((fine_seq_value >> 24) & 0xFF)
+    };
+
+    // Obtain the SPI function pointer
+    dwt_writeregfulladdr(DW3000_REG_17_ADDR, DW3000_REG_17_TXFSEQ_OFFSET, fine_seq_buf, 4);
+}
+
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief This is used to enable GPIO for external LNA or PA functionality - HW dependent, consult the DW3000 User Manual.
+ *        This can also be used for debug as enabling TX and RX GPIOs is quite handy to monitor DW3000's activity.
+ *
+ * NOTE: Enabling PA functionality requires that fine grain TX sequencing is deactivated. This can be done using
+ *       dwt_setfinegraintxseq().
+ *
+ * input parameters
+ * @param lna_pa - bit field: bit 0 if set will enable LNA functionality,
+ *                          : bit 1 if set will enable PA functionality,
+ *                          : to disable LNA/PA set the bits to 0 (
+ * output parameters
+ *
+ * no return value
+ */
+void dwt_setlnapamode(int lna_pa) {
+
+    // read the current value
+    uint32_t gpio_modes = 0;
+    dwt_readregfulladdr(DW3000_REG_5_ADDR, DW3000_REG_5_GPIO_MODE_OFFSET, (uint8_t*)&gpio_modes, 4);
+
+    // clear GPIO 0, 1, 4, 5, 6, configuration
+    gpio_modes &= (~(DW3000_REG_5_GPIO_MODE_MSGP0_BIT_MASK | DW3000_REG_5_GPIO_MODE_MSGP1_BIT_MASK |\
+                    DW3000_REG_5_GPIO_MODE_MSGP4_BIT_MASK | DW3000_REG_5_GPIO_MODE_MSGP5_BIT_MASK | DW3000_REG_5_GPIO_MODE_MSGP6_BIT_MASK));
+    
+    if (lna_pa & DWT_LNA_ENABLE)
+    {
+        gpio_modes |= GPIO_PIN6_EXTRX;   
+    }
+    if (lna_pa & DWT_PA_ENABLE)
+    {
+        gpio_modes |= (GPIO_PIN4_EXTDA | GPIO_PIN5_EXTTX);
+    }
+    if (lna_pa & DWT_TXRX_EN)
+    {
+        gpio_modes |= (GPIO_PIN0_EXTTXE | GPIO_PIN1_EXTRXE);
+    }
+    
+    // write the new value
+    dwt_writeregfulladdr(DW3000_REG_5_ADDR, DW3000_REG_5_GPIO_MODE_OFFSET, (uint8_t*)&gpio_modes, 4);
+}
+
+
+
 
 
 
