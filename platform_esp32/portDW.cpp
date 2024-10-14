@@ -13,7 +13,6 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
 #include "port.h"
 
 
@@ -71,4 +70,48 @@ void dwp_usleep(uint32_t usec)
 {
     // Use the ROM function for microsecond delay
     ets_delay_us(usec);
+}
+
+/****************************************************************************//**
+ *
+ */
+
+
+void wakeup_device_with_io(void)
+{
+    port_wakeup_dw3000_fast();
+}
+
+
+/*!
+ * @fn      port_wakeup_dw3000_fast
+ * @brief   waking up of DW3000 using DW_CS pin
+ *
+ *          the fast wakeup takes ~1ms:
+ *          500us to hold the CS  - TODO: this time can be reduced
+ *          500us to the crystal to startup
+ *          + ~various time 100us...10ms
+ */
+error_e port_wakeup_dw3000_fast(void)
+{
+    // Pull CS low to initiate wakeup
+    digitalWrite(DW_CS_PIN, LOW);
+    usleep(500);  // Delay for 500 microseconds
+
+    // Pull CS high to complete wakeup sequence
+    digitalWrite(DW_CS_PIN, HIGH);
+    usleep(500);  // Optional: Additional delay if necessary
+
+    // Return success
+    return _NO_ERR;
+}
+
+/*! 
+ * @fn      port_wakeup_dw3000
+ * @brief   waking up of DW3000 using DW_CS pin
+ *
+ * */
+error_e port_wakeup_dw3000(void) {
+    //TODO: implement the function
+    return _NO_ERR;
 }

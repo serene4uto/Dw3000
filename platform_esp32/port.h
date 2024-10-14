@@ -19,6 +19,17 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#include "error_types.h"
+
+#define DW_SPI_MAX_BAUDRATE 8000000
+#define DW_SPI_MIN_BAUDRATE 1000000
+
+#define DW_IRQ_PIN 34
+#define DW_RST_PIN 27
+#define DW_WAKEUP_PIN 32
+#define DW_CS_PIN 4
+
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -49,6 +60,14 @@ struct dw_s
 };
 
 typedef struct dw_s dw_t;
+
+/* port functions prototypes
+ *
+ * */
+
+error_e port_wakeup_dw3000_fast(void);
+error_e port_wakeup_dw3000(void);
+void wakeup_device_with_io(void);
 
 /* Time section */
 void start_timer(volatile uint32_t *p_timestamp);
