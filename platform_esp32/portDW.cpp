@@ -15,6 +15,8 @@
 #include "freertos/task.h"
 #include "port.h"
 
+#include "deca_device_api.h"    
+
 /**/
 extern const dw_t *pDwChip;
 
@@ -77,6 +79,26 @@ void dwp_usleep(uint32_t usec)
 /****************************************************************************//**
  *
  */
+
+void init_dw3000_irq(void)
+{
+    const dw_t *pDw = pDwChip;
+
+    pinMode(pDw->irqPin, INPUT_PULLDOWN);
+}
+void enable_dw3000_irq(void)
+{
+    const dw_t *pDw = pDwChip;
+
+    attachInterrupt(pDw->irqPin, dwt_isr, RISING);
+}
+
+void disable_dw3000_irq(void)
+{
+    const dw_t *pDw = pDwChip;
+
+    detachInterrupt(pDw->irqPin);
+}
 
 /*!
  * @fn reset_DW3000()

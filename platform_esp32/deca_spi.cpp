@@ -21,8 +21,8 @@ extern SPIClass SPI;
 // Define the SPI handler structure
 static spi_handle_t spi_handle {
     .spi = &SPI,
-    .fastSettings = SPISettings(8000000L, MSBFIRST, SPI_MODE0),
-    .slowSettings = SPISettings(2000000L, MSBFIRST, SPI_MODE0),
+    .fastSettings = SPISettings(DW_SPI_FAST_BAUDRATE, MSBFIRST, SPI_MODE0),
+    .slowSettings = SPISettings(DW_SPI_SLOW_BAUDRATE, MSBFIRST, SPI_MODE0),
     .csPin = DW_CS_PIN,
     .spiMutex = xSemaphoreCreateMutex() // beginTransaction() and endTransaction() are already thread-safe, so this mutex is not strictly necessary
 };

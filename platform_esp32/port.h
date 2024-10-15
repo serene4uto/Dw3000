@@ -22,8 +22,8 @@
 #include "deca_spi.h"
 #include "error_types.h"
 
-#define DW_SPI_MAX_BAUDRATE 8000000
-#define DW_SPI_MIN_BAUDRATE 1000000
+#define DW_SPI_FAST_BAUDRATE 8000000L
+#define DW_SPI_SLOW_BAUDRATE 2000000L
 
 #define DW_IRQ_PIN 34
 #define DW_RST_PIN 27
@@ -65,7 +65,9 @@ typedef struct dw_s dw_t;
 /* port functions prototypes
  *
  * */
-
+void init_dw3000_irq(void);
+void enable_dw3000_irq(void);
+void disable_dw3000_irq(void);
 void reset_DW3000(void);
 
 error_e port_wakeup_dw3000_fast(void);

@@ -16,7 +16,8 @@
     "includeDir": "driver/inc",
     "srcFilter": [
       "+<driver/src/*>",
-      "+<platform_esp32/*>"
+      "+<platform_esp32/*>",
+      "+<utils/*>"
     ]
   }
 }
