@@ -88,26 +88,11 @@ void reset_DW3000(void)
 {
     const dw_t *pDw = pDwChip;
 
-    // // ---------------------------
-    // // Step 1: Configure Reset Pin as OUTPUT
-    // // ---------------------------
-    // pinMode(pDw->rstPin, OUTPUT);       // Set reset pin as OUTPUT
-    // digitalWrite(pDw->rstPin, LOW);     // Assert reset by pulling pin LOW
-
-    // // ---------------------------
-    // // Step 2: Hold Reset LOW for 200 microseconds
-    // // ---------------------------
-    // delayMicroseconds(200);             // Wait for 200 us
-
-    // // ---------------------------
-    // // Step 3: Configure Reset Pin as INPUT with No Pull
-    // // ---------------------------
-    // pinMode(pDw->rstPin, INPUT);        // Set reset pin as INPUT (High Impedance)
-
-    // // ---------------------------
-    // // Step 4: Wait for 2000 microseconds (2 milliseconds)
-    // // ---------------------------
-    // delayMicroseconds(2000);            // Wait for 2000 us (2 ms)
+    pinMode(pDw->rstPin, OUTPUT);       // Set reset pin as OUTPUT
+    digitalWrite(pDw->rstPin, LOW);     // Assert reset by pulling pin LOW
+    usleep(200);                        
+    pinMode(pDw->rstPin, INPUT);        // Set reset pin as INPUT (High Impedance)
+    usleep(2000);                       
 }
 
 /****************************************************************************//**

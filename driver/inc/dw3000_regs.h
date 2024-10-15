@@ -1067,6 +1067,8 @@
 #define DW3000_REG_11_OTP_CFG_DGC_KICK_BIT_MASK              (0x40U)
 #define DW3000_REG_11_OTP_CFG_LDO_KICK_BIT_OFFSET            (7U)
 #define DW3000_REG_11_OTP_CFG_LDO_KICK_BIT_MASK              (0x80U)
+#define DW3000_REG_11_OTP_CFG_BIAS_KICK_BIT_OFFSET           (8U)       // missing in the manual
+#define DW3000_REG_11_OTP_CFG_BIAS_KICK_BIT_MASK             (0x100U)
 #define DW3000_REG_11_OTP_CFG_OPS_KICK_BIT_OFFSET            (10U)
 #define DW3000_REG_11_OTP_CFG_OPS_KICK_BIT_MASK              (0x400U)
 #define DW3000_REG_11_OTP_CFG_OPS_SEL_BIT_OFFSET             (11U)
@@ -1465,8 +1467,32 @@
 #define DW3000_REG_17_SOFT_RST_GPIO_RST_BIT_OFFSET          (8U)
 #define DW3000_REG_17_SOFT_RST_GPIO_RST_BIT_MASK            (0x100U)
 
-/* Register:  CLK_CTRL (0x04) */
-//TODO: Add register definitions
+/* Register:  CLK_CTRL (0x04) - PMSC clock control register*/
+#define DW3000_REG_17_CLK_CTRL_OFFSET                        0x04
+#define DW3000_REG_17_CLK_CTRL_BYTE_LEN                      (4U)
+/* Fields */
+#define DW3000_REG_17_CLK_CTRL_SYS_CLK_BIT_OFFSET            (0U)
+#define DW3000_REG_17_CLK_CTRL_SYS_CLK_BIT_MASK              (0x3U)
+#define DW3000_REG_17_CLK_CTRL_RX_CLK_BIT_OFFSET             (2U)
+#define DW3000_REG_17_CLK_CTRL_RX_CLK_BIT_MASK               (0xCU)
+#define DW3000_REG_17_CLK_CTRL_TX_CLK_BIT_OFFSET             (4U)
+#define DW3000_REG_17_CLK_CTRL_TX_CLK_BIT_MASK               (0x30U)
+#define DW3000_REG_17_CLK_CTRL_ACC_CLK_EN_BIT_OFFSET         (6U)
+#define DW3000_REG_17_CLK_CTRL_ACC_CLK_EN_BIT_MASK           (0x40U)
+#define DW3000_REG_17_CLK_CTRL_CIA_CLK_EN_BIT_OFFSET         (8U)
+#define DW3000_REG_17_CLK_CTRL_CIA_CLK_EN_BIT_MASK           (0x100U)
+#define DW3000_REG_17_CLK_CTRL_SAR_CLK_EN_BIT_OFFSET         (10U)
+#define DW3000_REG_17_CLK_CTRL_SAR_CLK_EN_BIT_MASK           (0x400U)
+#define DW3000_REG_17_CLK_CTRL_ACC_MCLK_EN_BIT_OFFSET        (15U)
+#define DW3000_REG_17_CLK_CTRL_ACC_MCLK_EN_BIT_MASK          (0x8000U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_CLK_EN_BIT_OFFSET        (16U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_CLK_EN_BIT_MASK          (0x10000U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_DCLK_EN_BIT_OFFSET       (18U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_DCLK_EN_BIT_MASK         (0x40000U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_DRST_N_BIT_OFFSET        (19U)
+#define DW3000_REG_17_CLK_CTRL_GPIO_DRST_N_BIT_MASK          (0x80000U)
+#define DW3000_REG_17_CLK_CTRL_LP_CLK_EN_BIT_OFFSET          (23U)
+#define DW3000_REG_17_CLK_CTRL_LP_CLK_EN_BIT_MASK            (0x800000U)
 
 /* Register:  SEQ_CTRL (0x08) */
 //TODO: Add register definitions
@@ -1485,7 +1511,12 @@
 //TODO: Add register definitions
 
 /* Register:  BIAS_CTRL (0x1F) - Analog blocks’ calibration values */
-//TODO: Add register definitions
+#define DW3000_REG_17_BIAS_CTRL_OFFSET                       0x1F
+#define DW3000_REG_17_BIAS_CTRL_BYTE_LEN                     (2U)
+/* Fields */
+#define DW3000_REG_17_BIAS_CTRL_BIAS_CTRL_BIT_OFFSET         (0U)
+#define DW3000_REG_17_BIAS_CTRL_BIAS_CTRL_BIT_MASK           (0x1FU)
+
 
 /******************************************************************************
 * @brief Bit definitions for register page 0x12 : RX_BUFFER_0

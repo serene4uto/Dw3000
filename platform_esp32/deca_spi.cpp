@@ -21,8 +21,8 @@ extern SPIClass SPI;
 // Define the SPI handler structure
 static spi_handle_t spi_handle {
     .spi = &SPI,
-    .fastSettings = SPISettings(8000000, MSBFIRST, SPI_MODE0),
-    .slowSettings = SPISettings(1000000, MSBFIRST, SPI_MODE0),
+    .fastSettings = SPISettings(8000000L, MSBFIRST, SPI_MODE0),
+    .slowSettings = SPISettings(2000000L, MSBFIRST, SPI_MODE0),
     .csPin = DW_CS_PIN,
     .spiMutex = xSemaphoreCreateMutex() // beginTransaction() and endTransaction() are already thread-safe, so this mutex is not strictly necessary
 };
@@ -40,7 +40,7 @@ const dw_t dw_chip = {
 const dw_t *pDwChip = &dw_chip;
 
 //------------------------------------------------------------------------------
-static SPISettings spiSettings = spi_handle.fastSettings; // Default SPI settings
+static SPISettings spiSettings = spi_handle.slowSettings; // Default SPI settings
 
 //-----------------------------------------------------------------------------
 

@@ -66,6 +66,8 @@ typedef struct dw_s dw_t;
  *
  * */
 
+void reset_DW3000(void);
+
 error_e port_wakeup_dw3000_fast(void);
 error_e port_wakeup_dw3000(void);
 void wakeup_device_with_io(void);
