@@ -138,6 +138,8 @@ static void _dwt_kick_dgc_on_wakeup(int8_t channel);
 
 static uint16_t get_sts_mnth(uint16_t sts, uint8_t default_threshold, uint8_t shift_val);
 
+static void dwt_enable_rf_tx(uint32_t channel, uint8_t switch_control);
+
 static void dwt_xfer3000(const uint32_t regFileID, const uint16_t indx, const uint16_t length, uint8_t *buffer, const spi_modes_e mode);
 static void dwt_writetodevice(const uint32_t regFileID, const uint16_t indx, const uint16_t length, const uint8_t *buffer);
 static void dwt_readfromdevice(const uint32_t regFileID, const uint16_t indx, const uint16_t length, uint8_t *buffer);
@@ -647,6 +649,49 @@ static void dwt_force_clocks(int clocks)
     }
 
 } // end dwt_force_clocks()
+
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief This function will enable TX LDOs and allow TX blocks to be manually turned on by dwt_enable_rftx_blocks for a given channel
+ *
+ * input parameters
+ * @param[in] channel - specifies the operating channel (e.g. 5 or 9)
+ * @param[in] switch_config - specifies whether the switch needs to be configured for TX 
+ *
+ * output parameters
+ *
+ */
+static
+void dwt_enable_rf_tx(uint32_t channel, uint8_t switch_control)
+{
+    //Turn on TX LDOs
+    dwt_or32bitoffsetreg(LDO_CTRL_ID, 0, (LDO_CTRL_LDO_VDDHVTX_VREF_BIT_MASK |
+            LDO_CTRL_LDO_VDDHVTX_EN_BIT_MASK));
+    dwt_or32bitoffsetreg(LDO_CTRL_ID, 0, (LDO_CTRL_LDO_VDDTX2_VREF_BIT_MASK |
+            LDO_CTRL_LDO_VDDTX1_VREF_BIT_MASK |
+            LDO_CTRL_LDO_VDDTX2_EN_BIT_MASK |
+            LDO_CTRL_LDO_VDDTX1_EN_BIT_MASK));
+
+    //Enable RF blocks for TX (configure RF_ENABLE_ID reg)
+    if (channel == SEL_CHANNEL5)
+    {
+        dwt_or32bitoffsetreg(RF_ENABLE_ID, 0, (RF_ENABLE_TX_SW_EN_BIT_MASK
+            | RF_ENABLE_TX_CH5_BIT_MASK | RF_ENABLE_TX_EN_BIT_MASK
+            | RF_ENABLE_TX_EN_BUF_BIT_MASK | RF_ENABLE_TX_BIAS_EN_BIT_MASK));
+    }
+    else
+    {
+        dwt_or32bitoffsetreg(RF_ENABLE_ID, 0, (RF_ENABLE_TX_SW_EN_BIT_MASK
+            | RF_ENABLE_TX_EN_BIT_MASK
+            | RF_ENABLE_TX_EN_BUF_BIT_MASK | RF_ENABLE_TX_BIAS_EN_BIT_MASK));
+    }
+
+    if (switch_control)
+    {
+        //configure the TXRX switch for TX mode 
+        dwt_write32bitoffsetreg(RF_SWITCH_CTRL_ID, 0x0, TXRXSWITCH_TX);
+    }
+
+} // end dwt_enable_rf_tx()
 
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -1559,6 +1604,45 @@ int dwt_configure(dwt_config_t *config)
     return error;
 }
 
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief This function provides the API for the configuration of the TX spectrum
+ * including the power and pulse generator delay. The input is a pointer to the data structure
+ * of type dwt_txconfig_t that holds all the configurable items.
+ *
+ * input parameters
+ * @param config    -   pointer to the txrf configuration structure, which contains the tx rf config data
+ *
+ * output parameters
+ *
+ * no return value
+ */
+void dwt_configuretxrf(dwt_txconfig_t *config)
+{
+    if (config->PGcount == 0) 
+    {
+        // Configure RF TX PG_DELAY
+        dwt_write8bitoffsetreg(TX_CTRL_HI_ID, 0, config->PGdly);
+    }
+    else
+    {
+        uint8_t channel = 5;
+        if (dwt_read8bitoffsetreg(CHAN_CTRL_ID, 0) & 0x1)
+        {
+            channel = 9;
+        }
+        dwt_calcbandwidthadj(config->PGcount, channel);
+    }
+
+    // Configure TX power
+    dwt_write32bitreg(TX_POWER_ID, config->power);
+}
+
+
+
+
+
+
+
 
 
 
@@ -1638,6 +1722,44 @@ uint8_t dwt_generatecrc8(const uint8_t *byteArray, int flen, uint8_t crcInit)
     return(crcInit);
 }
 
+
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief this function determines the adjusted bandwidth setting (PG_DELAY bitfield setting)
+ * of the DW3000. The adjustemnt is a result of DW3000 internal PG cal routine, given a target count value it will try to
+ * find the PG delay which gives the closest count value.
+ * Manual sequencing of TX blocks and TX clocks need to be enabled for either channel 5 or 9.
+ * This function presumes that the PLL is already in the IDLE state. Please configure the PLL to IDLE
+ * state before calling this function, by calling dwt_configure.
+ *
+ * input parameters:
+ * @param target_count - uint16_t - the PG count target to reach in order to correct the bandwidth
+ * @param channel - int - The channel to configure for the corrected bandwith (5 or 9)
+ *
+ * output parameters:
+ * returns: (uint8_t) The setting that was written to the PG_DELAY register (when calibration completed)
+ */
+uint8_t dwt_calcbandwidthadj(uint16_t target_count, uint8_t channel)
+{
+    //TODO: 
+    // // Force system clock to FOSC/4 and TX clocks on and enable RF blocks
+    // dwt_force_clocks(FORCE_CLK_SYS_TX);
+    // dwt_enable_rf_tx(channel, 0);
+    // dwt_enable_rftx_blocks(channel);
+
+    // // Write to the PG target before kicking off PG auto-cal with given target value
+    // dwt_write16bitoffsetreg(PG_CAL_TARGET_ID, 0x0, target_count & PG_CAL_TARGET_TARGET_BIT_MASK);
+    // // Run PG count cal
+    // dwt_or8bitoffsetreg(PGC_CTRL_ID, 0x0, (uint8_t)(PGC_CTRL_PGC_START_BIT_MASK | PGC_CTRL_PGC_AUTO_CAL_BIT_MASK));
+    // // Wait for calibration to complete
+    // while (dwt_read8bitoffsetreg(PGC_CTRL_ID, 0) & PGC_CTRL_PGC_START_BIT_MASK);
+
+    // //Restore clocks to AUTO and turn off TX blocks
+    // dwt_disable_rftx_blocks();
+    // dwt_disable_rf_tx(0);
+    // dwt_force_clocks(FORCE_CLK_AUTO);
+
+    // return  (dwt_read8bitoffsetreg(TX_CTRL_HI_ID, 0) & TX_CTRL_HI_TX_PG_DELAY_BIT_MASK);
+}
 
 
 

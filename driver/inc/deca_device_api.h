@@ -2727,6 +2727,23 @@ extern "C"
      */
     uint8_t dwt_readpgdelay(void);
 
+    //TODO: implement this without channel parameter
+    // /*! ------------------------------------------------------------------------------------------------------------------
+    //  * @brief this function determines the adjusted bandwidth setting (PG_DELAY bitfield setting)
+    //  * of the DW3000. The adjustemnt is a result of DW3000 internal PG cal routine, given a target count value it will try to
+    //  * find the PG delay which gives the closest count value.
+    //  * Manual sequencing of TX blocks and TX clocks need to be enabled for either channel 5 or 9.
+    //  * This function presumes that the PLL is already in the IDLE state. Please configure the PLL to IDLE
+    //  * state before calling this function, by calling dwt_configure.
+    //  *
+    //  * input parameters:
+    //  * @param target_count - uint16_t - the PG count target to reach in order to correct the bandwidth
+    //  *
+    //  * output parameters:
+    //  * returns: (uint8_t) The setting that was written to the PG_DELAY register (when calibration completed)
+    //  */
+    // uint8_t dwt_calcbandwidthadj(uint16_t target_count); 
+
     /*! ------------------------------------------------------------------------------------------------------------------
      * @brief this function determines the adjusted bandwidth setting (PG_DELAY bitfield setting)
      * of the DW3000. The adjustemnt is a result of DW3000 internal PG cal routine, given a target count value it will try to
@@ -2737,11 +2754,12 @@ extern "C"
      *
      * input parameters:
      * @param target_count - uint16_t - the PG count target to reach in order to correct the bandwidth
+     * @param channel - int - The channel to configure for the corrected bandwith (5 or 9)
      *
      * output parameters:
      * returns: (uint8_t) The setting that was written to the PG_DELAY register (when calibration completed)
      */
-    uint8_t dwt_calcbandwidthadj(uint16_t target_count);
+    uint8_t dwt_calcbandwidthadj(uint16_t target_count, uint8_t channel);
 
     /*! ------------------------------------------------------------------------------------------------------------------
      * @brief this function calculates the value in the pulse generator counter register (PGC_STATUS) for a given PG_DELAY
