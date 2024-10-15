@@ -171,6 +171,21 @@ int dwt_probe(struct dwt_probe_s *probe_interf)
     return DWT_SUCCESS;
 }
 
+/*! ------------------------------------------------------------------------------------------------------------------
+ * @brief This function will update dw pointer used by interrupt
+ *
+ * input parameters
+ * @param new_dw - dw instatiated by MCPS layer
+ *
+ * return parameters
+ * old_dw pointer. This pointer can be restored when deleting MCPS instance
+ *
+ */
+struct dwchip_s* dwt_update_dw(struct dwchip_s* new_dw)
+{
+    //TODO: implement this function
+    return NULL;
+}
 
 
 // -------------------------------------------------------------------------------------------------------------------
@@ -811,7 +826,7 @@ int dwt_initialise(int mode)
 
     pdw3000local->dblbuffon = DBL_BUFF_OFF; // Double buffer mode off by default / clear the flag
     pdw3000local->sleep_mode = DWT_RUNSAR;  // Configure RUN_SAR on wake by default as it is needed when running PGF_CAL
-    pdw3000local->spicrc = 0;
+    pdw3000local->spicrc = DWT_SPI_CRC_MODE_NO; // SPI CRC check disabled by default
     pdw3000local->stsconfig = 0; //STS off
     pdw3000local->vBatP = 0;
     pdw3000local->tempP = 0;

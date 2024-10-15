@@ -2383,72 +2383,72 @@ extern void wakeup_device_with_io(void);
  */
 void dwt_wakeup_ic(void);
 
-/*! ------------------------------------------------------------------------------------------------------------------
- * @brief
- * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
- * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
- * Low level abstract function to write to the SPI, this should be used when DW3000 SPI CRC mode is used
- * Takes two separate byte buffers for write header and write data
- * returns 0 for success, or -1 for error
- *
- * Note: The body of this function is defined in deca_spi.c and is platform specific
- *
- * input parameters:
- * @param headerLength  - number of bytes header being written
- * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to be written
- * @param bodylength    - number of bytes data being written
- * @param bodyBuffer    - pointer to buffer containing the 'bodylength' bytes od data to be written
- * @param crc8          - 8-bit crc, calculated on the header and data bytes
- *
- * output parameters
- *
- * returns DWT_SUCCESS for success, or DWT_ERROR for error
- */
-extern int writetospiwithcrc(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t bodylength, /*const*/ uint8_t *bodyBuffer, uint8_t crc8);
+// /*! ------------------------------------------------------------------------------------------------------------------
+//  * @brief
+//  * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
+//  * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
+//  * Low level abstract function to write to the SPI, this should be used when DW3000 SPI CRC mode is used
+//  * Takes two separate byte buffers for write header and write data
+//  * returns 0 for success, or -1 for error
+//  *
+//  * Note: The body of this function is defined in deca_spi.c and is platform specific
+//  *
+//  * input parameters:
+//  * @param headerLength  - number of bytes header being written
+//  * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to be written
+//  * @param bodylength    - number of bytes data being written
+//  * @param bodyBuffer    - pointer to buffer containing the 'bodylength' bytes od data to be written
+//  * @param crc8          - 8-bit crc, calculated on the header and data bytes
+//  *
+//  * output parameters
+//  *
+//  * returns DWT_SUCCESS for success, or DWT_ERROR for error
+//  */
+// extern int writetospiwithcrc(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t bodylength, /*const*/ uint8_t *bodyBuffer, uint8_t crc8);
 
-/*! ------------------------------------------------------------------------------------------------------------------
- * @brief
- * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
- * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
- * Low level abstract function to write to the SPI
- * Takes two separate byte buffers for write header and write data
- * returns 0 for success, or -1 for error
- *
- * Note: The body of this function is defined in deca_spi.c and is platform specific
- *
- * input parameters:
- * @param headerLength  - number of bytes header being written
- * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to be written
- * @param bodylength    - number of bytes data being written
- * @param bodyBuffer    - pointer to buffer containing the 'bodylength' bytes od data to be written
- *
- * output parameters
- *
- * returns DWT_SUCCESS for success, or DWT_ERROR for error
- */
-extern int writetospi(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t bodylength, /*const*/ uint8_t *bodyBuffer);
+// /*! ------------------------------------------------------------------------------------------------------------------
+//  * @brief
+//  * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
+//  * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
+//  * Low level abstract function to write to the SPI
+//  * Takes two separate byte buffers for write header and write data
+//  * returns 0 for success, or -1 for error
+//  *
+//  * Note: The body of this function is defined in deca_spi.c and is platform specific
+//  *
+//  * input parameters:
+//  * @param headerLength  - number of bytes header being written
+//  * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to be written
+//  * @param bodylength    - number of bytes data being written
+//  * @param bodyBuffer    - pointer to buffer containing the 'bodylength' bytes od data to be written
+//  *
+//  * output parameters
+//  *
+//  * returns DWT_SUCCESS for success, or DWT_ERROR for error
+//  */
+// extern int writetospi(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t bodylength, /*const*/ uint8_t *bodyBuffer);
 
-/*! ------------------------------------------------------------------------------------------------------------------
- * @brief
- * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
- * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
- * Low level abstract function to write to the SPI
- * Takes two separate byte buffers for write header and write data
- * returns 0 for success, or -1 for error
- *
- * Note: The body of this function is defined in deca_spi.c and is platform specific
- *
- * input parameters:
- * @param headerLength  - number of bytes header to write
- * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to write
- * @param readlength    - number of bytes data being read
- * @param readBuffer    - pointer to buffer containing to return the data (NB: size required = headerLength + readlength)
- *
- * output parameters
- *
- * returns DWT_SUCCESS for success (and the position in the buffer at which data begins), or DWT_ERROR for error
- */
-extern int readfromspi(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t readlength, uint8_t *readBuffer);
+// /*! ------------------------------------------------------------------------------------------------------------------
+//  * @brief
+//  * NB: In porting this to a particular microprocessor, the implementer needs to define the two low
+//  * level abstract functions to write to and read from the SPI the definitions should be in deca_spi.c file.
+//  * Low level abstract function to write to the SPI
+//  * Takes two separate byte buffers for write header and write data
+//  * returns 0 for success, or -1 for error
+//  *
+//  * Note: The body of this function is defined in deca_spi.c and is platform specific
+//  *
+//  * input parameters:
+//  * @param headerLength  - number of bytes header to write
+//  * @param headerBuffer  - pointer to buffer containing the 'headerLength' bytes of header to write
+//  * @param readlength    - number of bytes data being read
+//  * @param readBuffer    - pointer to buffer containing to return the data (NB: size required = headerLength + readlength)
+//  *
+//  * output parameters
+//  *
+//  * returns DWT_SUCCESS for success (and the position in the buffer at which data begins), or DWT_ERROR for error
+//  */
+// extern int readfromspi(uint16_t headerLength, /*const*/ uint8_t *headerBuffer, uint16_t readlength, uint8_t *readBuffer);
 
 #ifdef STM32F429xx
 /*! ------------------------------------------------------------------------------------------------------------------
