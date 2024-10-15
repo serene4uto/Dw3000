@@ -138,7 +138,8 @@ static void dwt_writeregfulladdr(uint8_t base_addr, uint16_t sub_addr, uint8_t *
 static void dwt_force_clocks(int clocks) {
     uint16_t wregval = 0;
     if (clocks == FORCE_CLK_SYS_TX) {
-        wregval = (uint16_t)(CLK_CTRL_TX_BUF_CLK_ON_BIT_MASK | CLK_CTRL_RX_BUF_CLK_ON_BIT_MASK)
+        // wregval = (uint16_t)(CLK_CTRL_TX_BUF_CLK_ON_BIT_MASK | CLK_CTRL_RX_BUF_CLK_ON_BIT_MASK)
+        //TODO: keep updating this function
     }
 
     if (clocks == FORCE_CLK_AUTO) {
