@@ -337,11 +337,11 @@ struct dwt_tx_fctrl_s
     uint8_t ranging;
 };
 
-struct dwt_config_rf_port_s
-{
-    dwt_rf_port_selection_e port;
-    dwt_rf_port_ctrl_e enable;
-};
+// struct dwt_config_rf_port_s
+// {
+//     dwt_rf_port_selection_e port;
+//     dwt_rf_port_ctrl_e enable;
+// };
 
 struct dwt_ostr_mode_s
 {
@@ -349,11 +349,11 @@ struct dwt_ostr_mode_s
     uint16_t wait_time;
 };
 
-struct dwt_cfg_wifi_coex_set_s
-{
-    dwt_wifi_coex_e enable;
-    int coex_io_swap;
-};
+// struct dwt_cfg_wifi_coex_set_s
+// {
+//     dwt_wifi_coex_e enable;
+//     int coex_io_swap;
+// };
 
 struct dwt_cfg_wifi_coex_s
 {
@@ -361,11 +361,11 @@ struct dwt_cfg_wifi_coex_s
     uint8_t coex_swap;
 };
 
-struct dwt_timer_exp_s
-{
-    dwt_timers_e timer_name;
-    uint32_t exp;
-};
+// struct dwt_timer_exp_s
+// {
+//     dwt_timers_e timer_name;
+//     uint32_t exp;
+// };
 
 struct dwt_adj_tx_power_s
 {

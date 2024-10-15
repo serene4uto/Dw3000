@@ -1,20 +1,20 @@
 /*! ----------------------------------------------------------------------------
  * @file    deca_version.h
- * @brief   Defines the version info for the DW3XXX device driver including its API
+ * @brief   Defines the version info for the DW3000 device driver including its API
  *
  * @attention
  *
- * Copyright 2017 - 2021 (c) Decawave Ltd, Dublin, Ireland.
+ * Copyright 2017-2020 (c) Decawave Ltd, Dublin, Ireland.
  *
  * All rights reserved.
  *
  */
 
-#ifndef _DECA_VERSION_DW3XXX_H_
-#define _DECA_VERSION_DW3XXX_H_ 1
+#ifndef _DECA_VERSION_H_
+#define _DECA_VERSION_H_
 
 //
-// The DW3XXX device driver is separately version numbered to any version the application using it may have
+// The DW3000 device driver is separately version numbered to any version the application using it may have
 //
 // Two symbols are defined here: one hexadecimal value and one string that includes the hex bytes.
 // Both should be updated together in a consistent way when the software is being modified.
@@ -26,9 +26,7 @@
 // Quantity AA is updated for major changes that will need user code changes
 //
 
-#define DRIVER_NAME        "DW3XXX"
-
-#define DRIVER_VERSION_HEX 0x060007
-#define DRIVER_VERSION_STR "DW3XXX Device Driver Version 06.00.07"
+#define DW3000_DRIVER_VERSION               0x040000
+#define DW3000_DEVICE_DRIVER_VER_STRING     "DW3000 C0 Device Driver Version 04.00.00"
 
 #endif
