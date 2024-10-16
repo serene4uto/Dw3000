@@ -827,7 +827,7 @@ int dwt_initialise(int mode)
     pdw3000local->dblbuffon = DBL_BUFF_OFF; // Double buffer mode off by default / clear the flag
     pdw3000local->sleep_mode = DWT_RUNSAR;  // Configure RUN_SAR on wake by default as it is needed when running PGF_CAL
     pdw3000local->spicrc = DWT_SPI_CRC_MODE_NO; // SPI CRC check disabled by default
-    pdw3000local->stsconfig = 0; //STS off
+    pdw3000local->stsconfig = DWT_STS_MODE_OFF; // STS disabled by default
     pdw3000local->vBatP = 0;
     pdw3000local->tempP = 0;
 
