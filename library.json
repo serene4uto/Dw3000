@@ -17,7 +17,8 @@
     "srcFilter": [
       "+<driver/src/*>",
       "+<platform_esp32/*>",
-      "+<utils/*>"
+      "+<utils_p1/*>",
+      "+<utils_p2/*>"
     ]
   }
 }
