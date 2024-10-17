@@ -51,7 +51,7 @@ static uint8_t rx_buffer[RX_BUF_LEN];
 /* Hold copy of status register state here for reference so that it can be examined at a debug breakpoint. */
 static uint32_t status_reg = 0;
 
-#define POLL_RX_TO_RESP_TX_DLY_UUS 2000 
+#define POLL_RX_TO_RESP_TX_DLY_UUS 900 // delay between poll RX and response TX
 
 /* Timestamps of frames transmission/reception. */
 static uint64_t poll_rx_ts;
@@ -61,29 +61,34 @@ static uint64_t resp_tx_ts;
  * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 5 below. */
 extern dwt_txconfig_t txconfig_options;
 
-volatile bool DRAM_ATTR rx_ok = false;
-volatile bool DRAM_ATTR tx_done = false;
-volatile bool DRAM_ATTR rx_err = false;
-volatile bool DRAM_ATTR rx_to = false;
+typedef enum {
+  NO_EVENT = 0,
+  TX_DONE,
+  RX_OK,
+  RX_TO,
+  RX_ERR,
+} dw_cb_event_t;
+
+volatile dw_cb_event_t DRAM_ATTR dw_cb_event = NO_EVENT;
 
 void tx_done_cb(const dwt_cb_data_t *cb_data)
 {
-  tx_done = true;
+  dw_cb_event = TX_DONE;
 }
 
 void rx_ok_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_ok = true;
+  dw_cb_event = RX_OK;
 }
 
 void rx_to_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_to = true;
+  dw_cb_event = RX_TO;
 }
 
 void rx_err_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_err = true;
+  dw_cb_event = RX_ERR;
 }
 
 
@@ -163,9 +168,9 @@ void setup() {
     NULL
   );
 
-  // set IRQ event
+  // set no IRQ event
   dwt_setinterrupt(
-    (SYS_STATUS_ALL_TX | SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_GOOD | SYS_STATUS_ALL_RX_TO),
+    0,
     0, 
     DWT_ENABLE_INT_ONLY
   );
@@ -182,85 +187,83 @@ void setup() {
 }
 
 void loop() {
+
+  // Set interrupt event for RX good frame, RX error and RX timeout --> wait for RX
+  dwt_setinterrupt(
+    (SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_TO | SYS_STATUS_RXFCG_BIT_MASK),
+    0, 
+    DWT_ENABLE_INT_ONLY
+  );
+
   /* Activate reception immediately. */
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
-  Serial.println("RX");
+  /* Poll for reception of a frame or error/timeout. See NOTE 6 below. */
+  // while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR)))
+  // { };
+  while(!(dw_cb_event == RX_OK || dw_cb_event == RX_ERR || dw_cb_event == RX_TO)) {
+    // delay(10);
+  }
 
-  while (!(rx_ok || rx_err || rx_to)) {
-    delay(10); // need small delay to avoid hard loop --> prevent interrupt from being serviced
-  }; // Poll until a frame is properly received or an error/timeout occurs.
-
-  if(rx_ok) {
-
+  if (dw_cb_event == RX_OK)
+  {
     Serial.println("RX OK");
 
-    rx_ok = false; // Clear flag
     uint32_t frame_len;
-
+    /* Clear good RX frame event in the DW IC status register. */
+    // dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG_BIT_MASK);
     /* A frame has been received, read it into the local buffer. */
     frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
     if (frame_len <= sizeof(rx_buffer))
     {
-      dwt_readrxdata(rx_buffer, frame_len, 0);
-
-      /* Check that the frame is a poll sent by "SS TWR initiator" example.
-       * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
-      rx_buffer[ALL_MSG_SN_IDX] = 0;
-      if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) 
-      {
-        
-        uint32_t resp_tx_time;
-        int ret;
-
-        /* Retrieve poll reception timestamp. */
-        poll_rx_ts = get_rx_timestamp_u64();
-
-        /* Compute response message transmission time. See NOTE 7 below. */
-        resp_tx_time = (poll_rx_ts + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
-        dwt_setdelayedtrxtime(resp_tx_time);
-
-        /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
-        resp_tx_ts = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
-
-        /* Write all timestamps in the final message. See NOTE 8 below. */
-        resp_msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
-        resp_msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
-
-        /* Write and send the response message. See NOTE 9 below. */
-        tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
-        dwt_writetxdata(sizeof(tx_resp_msg), tx_resp_msg, 0); /* Zero offset in TX buffer. */
-        dwt_writetxfctrl(sizeof(tx_resp_msg), 0, 1); /* Zero offset in TX buffer, ranging. */
-        ret = dwt_starttx(DWT_START_TX_DELAYED);
-
-        /* If dwt_starttx() returns an error, abandon this ranging exchange and proceed to the next one. See NOTE 10 below. */
-        if (ret == DWT_SUCCESS)
+        dwt_readrxdata(rx_buffer, frame_len, 0);
+        /* Check that the frame is a poll sent by "SS TWR initiator" example.
+         * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
+        rx_buffer[ALL_MSG_SN_IDX] = 0;
+        if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0)
         {
-            Serial.println("TX STARTED");
-
-            /* Poll DW IC until TX frame sent event set. See NOTE 6 below. */
-            while (!tx_done) {
-              delay(10); // need small delay to avoid hard loop --> prevent interrupt from being serviced
-            };
-
-            tx_done = false;
-
-            Serial.println("TX DONE");
-
-            /* Increment frame sequence number after transmission of the poll message (modulo 256). */
-            frame_seq_nb++;
+            uint32_t resp_tx_time;
+            int ret;
+            /* Retrieve poll reception timestamp. */
+            poll_rx_ts = get_rx_timestamp_u64();
+            /* Compute response message transmission time. See NOTE 7 below. */
+            resp_tx_time = (poll_rx_ts + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
+            dwt_setdelayedtrxtime(resp_tx_time);
+            /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
+            resp_tx_ts = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
+            /* Write all timestamps in the final message. See NOTE 8 below. */
+            resp_msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
+            resp_msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
+            /* Write and send the response message. See NOTE 9 below. */
+            tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
+            dwt_writetxdata(sizeof(tx_resp_msg), tx_resp_msg, 0); /* Zero offset in TX buffer. */
+            dwt_writetxfctrl(sizeof(tx_resp_msg), 0, 1); /* Zero offset in TX buffer, ranging. */
+            ret = dwt_starttx(DWT_START_TX_DELAYED);
+            /* If dwt_starttx() returns an error, abandon this ranging exchange and proceed to the next one. See NOTE 10 below. */
+            if (ret == DWT_SUCCESS)
+            {
+                /* Poll DW IC until TX frame sent event set. See NOTE 6 below. */
+                while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS_BIT_MASK))
+                { };
+                /* Clear TXFRS event. */
+                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS_BIT_MASK);
+                /* Increment frame sequence number after transmission of the poll message (modulo 256). */
+                frame_seq_nb++;
+            }
+            else
+            {
+                Serial.println("TX ERROR");
+            }
         }
-      }
     }
   }
-  else if (rx_err) {
-    rx_err = false; // Clear flag
-    Serial.println("RX ERR");
+  else
+  {
+      /* Clear RX error events in the DW IC status register. */
+      // dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR);
   }
-  else if (rx_to) {
-    rx_to = false; // Clear flag
-    Serial.println("RX TO");
-  }
+
+  dw_cb_event = NO_EVENT;
 }
 
 /*****************************************************************************************************************************************************
@@ -337,4 +340,3 @@ void loop() {
  * 13. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
  ****************************************************************************************************************************************************/
-

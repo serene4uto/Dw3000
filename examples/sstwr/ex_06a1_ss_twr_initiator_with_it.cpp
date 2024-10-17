@@ -54,8 +54,8 @@ static uint8_t rx_buffer[RX_BUF_LEN];
 /* Hold copy of status register state here for reference so that it can be examined at a debug breakpoint. */
 static uint32_t status_reg = 0;
 
-#define POLL_TX_TO_RESP_RX_DLY_UUS 1720
-#define RESP_RX_TIMEOUT_UUS 250
+#define POLL_TX_TO_RESP_RX_DLY_UUS 100
+#define RESP_RX_TIMEOUT_UUS 1000
 
 /* Hold copies of computed time of flight and distance here for reference so that it can be examined at a debug breakpoint. */
 static double tof;
@@ -65,31 +65,35 @@ static double distance;
  * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
 extern dwt_txconfig_t txconfig_options;
 
-volatile bool rx_ok = false;
-volatile bool tx_done = false;
-volatile bool rx_err = false;
-volatile bool rx_to = false;
+typedef enum {
+  NO_EVENT = 0,
+  TX_DONE,
+  RX_OK,
+  RX_TO,
+  RX_ERR,
+} dw_cb_event_t;
+
+volatile dw_cb_event_t DRAM_ATTR dw_cb_event = NO_EVENT;
 
 void tx_done_cb(const dwt_cb_data_t *cb_data)
 {
-  tx_done = true;
+  dw_cb_event = TX_DONE;
 }
 
 void rx_ok_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_ok = true;
+  dw_cb_event = RX_OK;
 }
 
 void rx_to_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_to = true;
+  dw_cb_event = RX_TO;
 }
 
 void rx_err_cb(const dwt_cb_data_t *cb_data)
 {
-  rx_err = true;
+  dw_cb_event = RX_ERR;
 }
-
 
 void setup() {
 
@@ -99,6 +103,8 @@ void setup() {
   SPI.begin();
   pinMode(DW_CS_PIN, OUTPUT);
   digitalWrite(DW_CS_PIN, HIGH);
+
+  pinMode(DW_RST_PIN, INPUT);
 
   init_dw3000_irq();
 
@@ -173,11 +179,22 @@ void setup() {
   );
 
   // set IRQ event
+
+  // Note: The TX good frame event is not enabled here as the TX callback is used to determine when the frame has been sent,
+  // and it can block RX events from being processed in time, because of very quick exchange of frames in the ranging process ?
+
+  // Enabling all interrupts at once in the setup() function can cause unintended behavior ?
+  // May be 2 event come so close to each other that cause interrupt gpio to be high for a long time ?
+
+  // --> it's better to set no interrupt events at initialisation
   dwt_setinterrupt(
-    (SYS_STATUS_ALL_TX | SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_GOOD | SYS_STATUS_ALL_RX_TO),
+    0,
     0, 
     DWT_ENABLE_INT_ONLY
   );
+  // Interrupt Event should be assigned when needed ? 
+  // for example, start tx command --> set TX good frame event --> wait event, 
+  // then, set RX good frame, RX error and RX timeout events --> wait event
 
   /* NOTE: Enabling Interrupts should be done after the dwt_setcallbacks() and dwt_setinterrupt() calls.
    * Otherwise, the DW IC may trigger unknown interrupt before the application is ready to handle it.
@@ -186,6 +203,8 @@ void setup() {
   enable_dw3000_irq();
 
   Serial.println("TWR INITIATOR Initialized");
+
+  delay(1000);
 }
 
 void loop() {
@@ -199,79 +218,88 @@ void loop() {
    * set by dwt_setrxaftertxdelay() has elapsed. */
   dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED);
 
-  while (!tx_done){};
+  // Set interrupt event for TX good frame after transmission
+  dwt_setinterrupt(
+    (SYS_STATUS_ALL_TX),
+    0, 
+    DWT_ENABLE_INT_ONLY
+  );
 
-  tx_done = false;
+  while(!(dw_cb_event == TX_DONE)) {
+    delay(10);
+  }
 
-  Serial.println("TX DONE");
+  // Set interrupt event for RX good frame, RX error and RX timeout --> wait for RX
+  dwt_setinterrupt(
+    (SYS_STATUS_ALL_RX_ERR | SYS_STATUS_ALL_RX_TO | SYS_STATUS_RXFCG_BIT_MASK),// | SYS_STATUS_ALL_TX),
+    0, 
+    DWT_ENABLE_INT_ONLY
+  );
 
-  while (!(rx_ok || rx_err || rx_to)) {}; // Poll until a frame is properly received or an error/timeout occurs.
+  /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 8 below. */
+  while(!(dw_cb_event == RX_OK || dw_cb_event == RX_ERR || dw_cb_event == RX_TO)) {
+    delay(10);
+  }
 
+  /* Increment frame sequence number after transmission of the poll message (modulo 256). */
   frame_seq_nb++;
 
-  if (rx_ok) {
+  if (dw_cb_event == RX_OK)
+  {
+      uint32_t frame_len;
 
-    Serial.println("RX OK");
+      /* Clear good RX frame event in the DW IC status register. */
+      dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG_BIT_MASK);
 
-    rx_ok = false; // Clear flag
-
-    uint32_t frame_len;
-
-    /* A frame has been received, read it into the local buffer. */
-    frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
-
-    if (frame_len <= sizeof(rx_buffer))
-    {
-      dwt_readrxdata(rx_buffer, frame_len, 0);
-
-      /* Check that the frame is the expected response from the companion "SS TWR responder" example.
-       * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
-      rx_buffer[ALL_MSG_SN_IDX] = 0;
-
-      if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0)
+      /* A frame has been received, read it into the local buffer. */
+      frame_len = dwt_read32bitreg(RX_FINFO_ID) & RXFLEN_MASK;
+      if (frame_len <= sizeof(rx_buffer))
       {
-        uint32_t poll_tx_ts, resp_rx_ts, poll_rx_ts, resp_tx_ts;
-        int32_t rtd_init, rtd_resp;
-        float clockOffsetRatio;
+          dwt_readrxdata(rx_buffer, frame_len, 0);
 
-        /* Retrieve poll transmission and response reception timestamps. See NOTE 9 below. */
-        poll_tx_ts = dwt_readtxtimestamplo32();
-        resp_rx_ts = dwt_readrxtimestamplo32();
+          /* Check that the frame is the expected response from the companion "SS TWR responder" example.
+           * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
+          rx_buffer[ALL_MSG_SN_IDX] = 0;
+          if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0)
+          {
+              uint32_t poll_tx_ts, resp_rx_ts, poll_rx_ts, resp_tx_ts;
+              int32_t rtd_init, rtd_resp;
+              float clockOffsetRatio ;
 
-        /* Read carrier integrator value and calculate clock offset ratio. See NOTE 11 below. */
-        clockOffsetRatio = ((float)dwt_readclockoffset()) / (uint32_t)(1<<26);
+              /* Retrieve poll transmission and response reception timestamps. See NOTE 9 below. */
+              poll_tx_ts = dwt_readtxtimestamplo32();
+              resp_rx_ts = dwt_readrxtimestamplo32();
 
-        /* Get timestamps embedded in response message. */
-        resp_msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX], &poll_rx_ts);
-        resp_msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX], &resp_tx_ts);
+              /* Read carrier integrator value and calculate clock offset ratio. See NOTE 11 below. */
+              clockOffsetRatio = ((float)dwt_readclockoffset()) / (uint32_t)(1<<26);
 
-        /* Compute time of flight and distance, using clock offset ratio to correct for differing local and remote clock rates */
-        rtd_init = resp_rx_ts - poll_tx_ts;
-        rtd_resp = resp_tx_ts - poll_rx_ts;
+              /* Get timestamps embedded in response message. */
+              resp_msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX], &poll_rx_ts);
+              resp_msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX], &resp_tx_ts);
 
-        tof = ((rtd_init - rtd_resp * (1 - clockOffsetRatio)) / 2.0) * DWT_TIME_UNITS;
-        distance = tof * SPEED_OF_LIGHT;
+              /* Compute time of flight and distance, using clock offset ratio to correct for differing local and remote clock rates */
+              rtd_init = resp_rx_ts - poll_tx_ts;
+              rtd_resp = resp_tx_ts - poll_rx_ts;
 
-        /* Display computed distance on console. */
-        Serial.print("Distance: ");
-        Serial.print(distance);
-        Serial.println(" m");
+              tof = ((rtd_init - rtd_resp * (1 - clockOffsetRatio)) / 2.0) * DWT_TIME_UNITS;
+              distance = tof * SPEED_OF_LIGHT;
 
+              Serial.print("DISTANCE: ");
+              Serial.println(distance);
+          }
       }
-    }
-
   }
-  else if (rx_err) {
-    rx_err = false; // Clear flag
+  else
+  {
+    /* Clear RX error/timeout events in the DW IC status register. */
+    // dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
+
     Serial.println("RX ERR");
   }
-  else if (rx_to) {
-    rx_to = false; // Clear flag
-    Serial.println("RX TO");
-  }
+
+  dw_cb_event = NO_EVENT;
 
   delay(RNG_DELAY_MS);
-  
 }
 
 /*****************************************************************************************************************************************************
