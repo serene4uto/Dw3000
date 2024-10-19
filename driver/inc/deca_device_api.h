@@ -247,24 +247,63 @@ typedef enum
 
 //DW3000 interrupt events
 
-#define DWT_INT_SCRC            0x00000004          // SPI write CRC error event
-#define DWT_INT_TFRS            0x00000080          // frame sent
-#define DWT_INT_LDED            0x00000400          // micro-code has finished execution
-#define DWT_INT_RFCG            0x00004000          // frame received with good CRC
-#define DWT_INT_RPHE            0x00001000          // receiver PHY header error
-#define DWT_INT_RFCE            0x00008000          // receiver CRC error
-#define DWT_INT_RFSL            0x00010000          // receiver sync loss error
-#define DWT_INT_RFTO            0x00020000          // frame wait timeout
-#define DWT_INT_LDEERR          0x00040000          // CIA error
-#define DWT_INT_RXOVRR          0x00100000          // receiver overrun
-#define DWT_INT_RXPTO           0x00200000          // preamble detect timeout
-#define DWT_INT_LCSSERR         0x00400000          // LCSS set up error
-#define DWT_INT_SFDT            0x04000000          // SFD timeout
-#define DWT_INT_HPDWARN         0x08000000          // HPDWARN timeout
-#define DWT_INT_CPERR           0x10000000          // STS Error
-#define DWT_INT_ARFE            0x20000000          // frame rejected (due to frame filtering configuration)
-#define DWT_INT_ALL             0x3FFFFFFF
-#define DWT_INT_RX              (DWT_INT_LDED | DWT_INT_RFCG | DWT_INT_RPHE | DWT_INT_RFCE | DWT_INT_RFSL | DWT_INT_RFTO | DWT_INT_LDEERR | DWT_INT_RXPTO | DWT_INT_SFDT | DWT_INT_ARFE)
+// #define DWT_INT_SCRC            0x00000004          // SPI write CRC error event
+// #define DWT_INT_TFRS            0x00000080          // frame sent
+// #define DWT_INT_LDED            0x00000400          // micro-code has finished execution
+// #define DWT_INT_RFCG            0x00004000          // frame received with good CRC
+// #define DWT_INT_RPHE            0x00001000          // receiver PHY header error
+// #define DWT_INT_RFCE            0x00008000          // receiver CRC error
+// #define DWT_INT_RFSL            0x00010000          // receiver sync loss error
+// #define DWT_INT_RFTO            0x00020000          // frame wait timeout
+// #define DWT_INT_LDEERR          0x00040000          // CIA error
+// #define DWT_INT_RXOVRR          0x00100000          // receiver overrun
+// #define DWT_INT_RXPTO           0x00200000          // preamble detect timeout
+// #define DWT_INT_LCSSERR         0x00400000          // LCSS set up error
+// #define DWT_INT_SFDT            0x04000000          // SFD timeout
+// #define DWT_INT_HPDWARN         0x08000000          // HPDWARN timeout
+// #define DWT_INT_CPERR           0x10000000          // STS Error
+// #define DWT_INT_ARFE            0x20000000          // frame rejected (due to frame filtering configuration)
+// #define DWT_INT_ALL             0x3FFFFFFF
+// #define DWT_INT_RX              (DWT_INT_LDED | DWT_INT_RFCG | DWT_INT_RPHE | DWT_INT_RFCE | DWT_INT_RFSL | DWT_INT_RFTO | DWT_INT_LDEERR | DWT_INT_RXPTO | DWT_INT_SFDT | DWT_INT_ARFE)
+
+/******************************************************************************
+ * @brief Bit definition of the SYS_ENABLE register
+ * exported for dwt_setinterrupt() API
+ **/
+typedef enum
+{
+    DWT_INT_TIMER1_BIT_MASK = (int)(0x80000000), // TIMER1 expiry
+    DWT_INT_TIMER0_BIT_MASK = 0x40000000UL,      // TIMER0 expiry
+    DWT_INT_ARFE_BIT_MASK = 0x20000000UL,        // Frame filtering error
+    DWT_INT_CPERR_BIT_MASK = 0x10000000UL,       // STS quality warning/error
+    DWT_INT_HPDWARN_BIT_MASK = 0x8000000UL,      // Half period warning flag when delayed TX/RX is used
+    DWT_INT_RXSTO_BIT_MASK = 0x4000000UL,        // SFD timeout
+    DWT_INT_PLL_HILO_BIT_MASK = 0x2000000UL,     // PLL calibration flag
+    DWT_INT_RCINIT_BIT_MASK = 0x1000000UL,       // Device has entered IDLE_RC
+    DWT_INT_SPIRDY_BIT_MASK = 0x800000UL,        // SPI ready flag
+    DWT_INT_RXPTO_BIT_MASK = 0x200000UL,         // Preamble timeout
+    DWT_INT_RXOVRR_BIT_MASK = 0x100000UL,        // RX overrun event when double RX buffer is used
+    DWT_INT_VWARN_BIT_MASK = 0x80000UL,          // Brownout event detected
+    DWT_INT_CIAERR_BIT_MASK = 0x40000UL,         // CIA error
+    DWT_INT_RXFTO_BIT_MASK = 0x20000UL,          // RX frame wait timeout
+    DWT_INT_RXFSL_BIT_MASK = 0x10000UL,          // Reed-Solomon error (RX sync loss)
+    DWT_INT_RXFCE_BIT_MASK = 0x8000U,            // RX frame CRC error
+    DWT_INT_RXFCG_BIT_MASK = 0x4000U,            // RX frame CRC good
+    DWT_INT_RXFR_BIT_MASK = 0x2000U,             // RX ended - frame ready
+    DWT_INT_RXPHE_BIT_MASK = 0x1000U,            // PHY header error
+    DWT_INT_RXPHD_BIT_MASK = 0x800U,             // PHY header detected
+    DWT_INT_CIADONE_BIT_MASK = 0x400U,           // CIA done
+    DWT_INT_RXSFDD_BIT_MASK = 0x200U,            // SFD detected
+    DWT_INT_RXPRD_BIT_MASK = 0x100U,             // Preamble detected
+    DWT_INT_TXFRS_BIT_MASK = 0x80U,              // Frame sent
+    DWT_INT_TXPHS_BIT_MASK = 0x40U,              // Frame PHR sent
+    DWT_INT_TXPRS_BIT_MASK = 0x20U,              // Frame preamble sent
+    DWT_INT_TXFRB_BIT_MASK = 0x10U,              // Frame transmission begins
+    DWT_INT_AAT_BIT_MASK = 0x8U,                 // Automatic ACK transmission pending
+    DWT_INT_SPICRCE_BIT_MASK = 0x4U,             // SPI CRC error
+    DWT_INT_CP_LOCK_BIT_MASK = 0x2U,             // PLL locked
+    DWT_INT_IRQS_BIT_MASK = 0x1U,                // Interrupt set
+} dwt_int_conf_e;
 
 
 //DW3000 SLEEP and WAKEUP configuration parameters
@@ -675,6 +714,19 @@ typedef enum
 #define DBL_BUFF_OFF             0x0
 #define DBL_BUFF_ACCESS_BUFFER_0 0x1
 #define DBL_BUFF_ACCESS_BUFFER_1 0x3
+
+
+/*
+ * The default XTAL TRIM value for load capacitors of 2pF.
+ * During the initialization the XTAL TRIM value can be read from the OTP and in case it is not present, the default would be used instead
+ * */
+#define DEFAULT_XTAL_TRIM 0x2E
+
+/*
+ * Max allowed value for XTAL trim
+ * */
+#define XTAL_TRIM_BIT_MASK 0x3F
+
 
 /********************************************************************************************************************/
 /*                                                    Additional                                                    */
